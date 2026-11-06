@@ -181,3 +181,4 @@ public static class ImageVectorizer
         return Math.Abs(dy * pt.X - dx * pt.Y + lineEnd.X * lineStart.Y - lineEnd.Y * lineStart.X) / mag;
     }
 }
+

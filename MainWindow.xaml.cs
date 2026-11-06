@@ -363,6 +363,13 @@ public partial class MainWindow : Window
             "Stato Connessione", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
+    private async void BtnPark_Click(object sender, RoutedEventArgs e)
+    {
+        ReadSettingsFromUi();
+        // Safe park: lift pen high to Z=25, move to X=10, Y=10
+        await _client.SendGCodeAsync(_settings.PrinterIp, _settings.PrinterPort, "G90\nG1 Z25.0 F1000\nG1 X10 Y10 F3000");
+    }
+
     private void BtnSaveGCode_Click(object sender, RoutedEventArgs e)
     {
         if (_transformedPaths == null || _transformedPaths.Count == 0)
@@ -415,14 +422,14 @@ public partial class MainWindow : Window
         string gcode = GCodeGenerator.GenerateGCode(_transformedPaths, _settings, dryRun);
         string filename = dryRun ? "plotter_dryrun.gcode" : "plotter_draw.gcode";
 
-        bool ok = await _client.UploadAndPrintAsync(_settings.PrinterIp, _settings.PrinterPort, filename, gcode, true);
+        var (ok, msg) = await _client.UploadAndPrintAsync(_settings.PrinterIp, _settings.PrinterPort, filename, gcode, true);
         if (ok)
         {
-            MessageBox.Show($"Lavoro inviato con successo!\nLa stampante sta avviando il {mode}.", "Avviato", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"Lavoro inviato con successo!\nLa stampante sta avviando il {mode}.\n\n{msg}", "Avviato", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         else
         {
-            MessageBox.Show($"Errore nell'invio del lavoro a {_settings.PrinterIp}:7125.\nVerifica la connessione di rete.", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Impossibile avviare il disegno sulla stampante:\n\n{msg}\n\nVerifica che la stampante non sia già occupata o in errore.", "Errore Avvio", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

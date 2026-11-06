@@ -7,7 +7,7 @@ namespace SparkXPenPlotter.Services;
 
 public class MoonrakerClient
 {
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(8) };
+    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(30) };
 
     public async Task<PrinterStateInfo> GetStatusAsync(string ip, int port = 7125)
     {
@@ -57,28 +57,65 @@ public class MoonrakerClient
         return info;
     }
 
-    public async Task<bool> UploadAndPrintAsync(string ip, int port, string filename, string gcodeContent, bool printNow = true)
+    public async Task<(bool Success, string Message)> UploadAndPrintAsync(
+        string ip, 
+        int port, 
+        string filename, 
+        string gcodeContent, 
+        bool printNow = true)
     {
         try
         {
-            string url = $"http://{ip}:{port}/server/files/upload";
+            // 1. Upload G-code file without starting print immediately to avoid blocking upload timeouts
+            string uploadUrl = $"http://{ip}:{port}/server/files/upload";
             using var form = new MultipartFormDataContent();
-
-            if (printNow)
-            {
-                form.Add(new StringContent("true"), "print");
-            }
 
             var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes(gcodeContent));
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
             form.Add(fileContent, "file", filename);
 
-            var res = await _http.PostAsync(url, form);
-            return res.IsSuccessStatusCode;
+            var uploadRes = await _http.PostAsync(uploadUrl, form);
+            if (!uploadRes.IsSuccessStatusCode)
+            {
+                string errText = await uploadRes.Content.ReadAsStringAsync();
+                return (false, $"Errore caricamento file: {uploadRes.StatusCode} - {errText}");
+            }
+
+            if (!printNow)
+            {
+                return (true, "File caricato sulla stampante con successo.");
+            }
+
+            // 2. Start print job via Moonraker print start API
+            string startUrl = $"http://{ip}:{port}/printer/print/start?filename={Uri.EscapeDataString(filename)}";
+            var startRes = await _http.PostAsync(startUrl, null);
+            if (!startRes.IsSuccessStatusCode)
+            {
+                // Fallback to JSON payload if query parameter is not accepted by older Moonraker
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(new { filename }), 
+                    Encoding.UTF8, 
+                    "application/json");
+                startRes = await _http.PostAsync($"http://{ip}:{port}/printer/print/start", jsonContent);
+            }
+
+            if (startRes.IsSuccessStatusCode)
+            {
+                return (true, "Disegno avviato con successo.");
+            }
+            else
+            {
+                string errText = await startRes.Content.ReadAsStringAsync();
+                return (false, $"File caricato, ma avvio stampa fallito: {startRes.StatusCode} - {errText}");
+            }
         }
-        catch
+        catch (TaskCanceledException)
         {
-            return false;
+            return (false, "Timeout di connessione con la stampante (oltre 30s).");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Errore di rete: {ex.Message}");
         }
     }
 
@@ -128,3 +165,4 @@ public class MoonrakerClient
         catch { return false; }
     }
 }
+

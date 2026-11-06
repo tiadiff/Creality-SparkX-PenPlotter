@@ -72,3 +72,4 @@ public class PrinterStateInfo
     public string Filename { get; set; } = "";
     public bool FilamentDetected { get; set; }
 }
+

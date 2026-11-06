@@ -50,3 +50,4 @@ dotnet build -c Release
 
 The resulting binary will be located at:
 `bin\Release\net8.0-windows\SparkXPenPlotter.exe`
+

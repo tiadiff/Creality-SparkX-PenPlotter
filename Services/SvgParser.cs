@@ -293,3 +293,4 @@ public static class SvgParser
         return false;
     }
 }
+

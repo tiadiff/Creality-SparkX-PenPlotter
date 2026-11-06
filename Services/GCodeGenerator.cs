@@ -117,13 +117,13 @@ public static class GCodeGenerator
         sb.AppendLine("; ==================================================================");
         sb.AppendLine("; SparkX Pen Plotter Studio - G-Code Generator");
         sb.AppendLine(dryRun ? "; *** DRY-RUN MODE: Drawing in air (+5mm above paper) ***" : "; *** REAL PLOTTING MODE ***");
-        sb.AppendLine($"; Bed Size: {settings.BedWidth:F1}x{settings.BedHeight:F1} mm | Paper: {settings.PaperWidth:F1}x{settings.PaperHeight:F1} mm");
-        sb.AppendLine($"; Draw Z: {actualZDraw:F2} mm | Travel Z: {actualZTravel:F2} mm");
+        sb.AppendLine(FormattableString.Invariant($"; Bed Size: {settings.BedWidth:F1}x{settings.BedHeight:F1} mm | Paper: {settings.PaperWidth:F1}x{settings.PaperHeight:F1} mm"));
+        sb.AppendLine(FormattableString.Invariant($"; Draw Z: {actualZDraw:F2} mm | Travel Z: {actualZTravel:F2} mm"));
         sb.AppendLine("; ==================================================================\n");
 
         // Safety header
         sb.AppendLine("; --- SAFETY INITIALIZATION ---");
-        sb.AppendLine("SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=0 ; Disable filament runout");
+        sb.AppendLine("SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=0 ; Disable filament runout dynamically during plotting");
         sb.AppendLine("M104 S0 ; Extruder heater OFF");
         sb.AppendLine("M140 S0 ; Bed heater OFF");
         sb.AppendLine("M106 S0 ; Fan OFF");
@@ -132,8 +132,8 @@ public static class GCodeGenerator
 
         // Touch-off calibration and immediate lift
         sb.AppendLine("; --- CRITICAL: LIFT PEN BEFORE ANY HORIZONTAL MOVE ---");
-        sb.AppendLine($"G92 Z{settings.ZDraw:F2} ; Register current position as contact height ({settings.ZDraw:F2}mm)");
-        sb.AppendLine($"G1 Z{actualZTravel:F2} F800 ; LIFT PEN IMMEDIATELY!");
+        sb.AppendLine(FormattableString.Invariant($"G92 Z{settings.ZDraw:F2} ; Register current position as contact height ({settings.ZDraw:F2}mm)"));
+        sb.AppendLine(FormattableString.Invariant($"G1 Z{actualZTravel:F2} F800 ; LIFT PEN IMMEDIATELY!"));
         sb.AppendLine("G4 P500 ; Dwell 0.5s to ensure pen is safely in the air\n");
 
         // Draw strokes
@@ -165,9 +165,11 @@ public static class GCodeGenerator
         sb.AppendLine("; --- FINISH & PRESENT DRAWING ---");
         sb.AppendLine(FormattableString.Invariant($"G1 Z{actualZTravel + 15.0:F2} F1000 ; Lift pen high away from sheet"));
         sb.AppendLine(FormattableString.Invariant($"G1 X10 Y{settings.BedHeight - 20:F2} F{settings.TravelSpeed} ; Slide bed forward"));
-        sb.AppendLine("M84 ; Disable steppers");
+        sb.AppendLine("SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=1 ; Re-enable filament sensor for 3D printing");
+        sb.AppendLine("; KEEP MOTORS POWERED: Coordinates preserved between drawings");
         sb.AppendLine("; === END OF PLOT ===");
 
         return sb.ToString();
     }
 }
+
