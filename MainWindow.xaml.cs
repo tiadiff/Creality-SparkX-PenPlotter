@@ -22,6 +22,8 @@ public partial class MainWindow : Window
     private List<VectorPath> _transformedPaths = new();
     private string? _currentFilePath;
     private bool _isUpdatingUi = false;
+    private PrinterHardwareMode _currentHardwareMode = PrinterHardwareMode.Unknown;
+    private int _hardwareCheckCounter = 0;
 
     public MainWindow()
     {
@@ -57,6 +59,11 @@ public partial class MainWindow : Window
     private async Task CheckConnectionAsync()
     {
         var status = await _client.GetStatusAsync(_settings.PrinterIp, _settings.PrinterPort);
+        if (status.IsConnected)
+        {
+            _currentHardwareMode = await _client.CheckHardwareModeAsync(_settings.PrinterIp, _settings.PrinterPort);
+            status.HardwareMode = _currentHardwareMode;
+        }
         UpdateStatusUi(status);
     }
 
@@ -66,6 +73,20 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(ip)) return;
 
         var status = await _client.GetStatusAsync(ip, _settings.PrinterPort);
+        if (status.IsConnected)
+        {
+            _hardwareCheckCounter++;
+            if (_hardwareCheckCounter % 6 == 0 || _currentHardwareMode == PrinterHardwareMode.Unknown)
+            {
+                _currentHardwareMode = await _client.CheckHardwareModeAsync(ip, _settings.PrinterPort);
+            }
+            status.HardwareMode = _currentHardwareMode;
+        }
+        else
+        {
+            _currentHardwareMode = PrinterHardwareMode.Unknown;
+            status.HardwareMode = PrinterHardwareMode.Unknown;
+        }
         UpdateStatusUi(status);
     }
 
@@ -86,6 +107,34 @@ public partial class MainWindow : Window
             TxtPrintState.Text = "Stato: Offline";
             TxtToolheadPos.Text = "Posizione: X=-- Y=-- Z=--";
             PrintProgress.Value = 0;
+        }
+
+        // Update Hardware Mode Badge & Description
+        if (BadgeMode != null && TxtModeBadge != null && TxtModeDescription != null)
+        {
+            if (status.HardwareMode == PrinterHardwareMode.PenPlotter)
+            {
+                BadgeMode.Background = new SolidColorBrush(Color.FromRgb(79, 70, 229)); // Indigo
+                TxtModeBadge.Text = "✒️ Plotter (Protetto)";
+                TxtModeBadge.Foreground = new SolidColorBrush(Color.FromRgb(224, 231, 255));
+                TxtModeDescription.Text = "Home Z impostato su quota sicura (nessun tastatore su piatto). Sensore filamento disattivato. Pronto per disegnare con pennarello.";
+            }
+            else if (status.HardwareMode == PrinterHardwareMode.ThreeDPrinting)
+            {
+                BadgeMode.Background = new SolidColorBrush(Color.FromRgb(6, 95, 70)); // Emerald
+                TxtModeBadge.Text = "🖨️ Stampa 3D (Fabbrica)";
+                TxtModeBadge.Foreground = new SolidColorBrush(Color.FromRgb(52, 211, 153));
+                TxtModeDescription.Text = "Tutti i sensori di fabbrica attivi. Home Z esegue il tastatore sul piatto e il sensore di filamento è abilitato.";
+            }
+            else
+            {
+                BadgeMode.Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)); // Slate
+                TxtModeBadge.Text = status.IsConnected ? "Non rilevato" : "Disconnesso";
+                TxtModeBadge.Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225));
+                TxtModeDescription.Text = status.IsConnected 
+                    ? "Configurazione personalizzata o non standard. Usa i pulsanti per applicare un preset." 
+                    : "Collega la stampante per verificare la modalità hardware corrente.";
+            }
         }
     }
 
@@ -358,9 +407,92 @@ public partial class MainWindow : Window
         await CheckConnectionAsync();
         MessageBox.Show(
             StatusText.Text.Contains("Connesso") 
-                ? $"Connessione riuscita a {_settings.PrinterIp}!\nStato Klipper: {TxtPrintState.Text}" 
+                ? $"Connessione riuscita a {_settings.PrinterIp}!\nStato Klipper: {TxtPrintState.Text}\nModalità rilevata: {TxtModeBadge.Text}" 
                 : $"Impossibile connettersi a {_settings.PrinterIp}:7125.\nVerifica che la stampante sia accesa e collegata al Wi-Fi.",
             "Stato Connessione", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private async void BtnSetPlotterMode_Click(object sender, RoutedEventArgs e)
+    {
+        ReadSettingsFromUi();
+        var confirm = MessageBox.Show(
+            "Vuoi configurare la stampante in MODALITÀ PEN PLOTTER?\n\n" +
+            "Modifiche applicate:\n" +
+            "• Home Z protetto: disabilita il tastatore sul piatto per non piegare o spezzare il pennarello ed evitare l'errore 'System Error'.\n" +
+            "• Sensore di filamento: disabilitato per permettere di tracciare disegni senza caricare filamento.\n" +
+            "• Riavvio sicuro del firmware Klipper (~10-15s).\n\n" +
+            "Procedere con la configurazione Plotter?",
+            "Attiva Modalità Pen Plotter", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            BtnSetPlotterMode.IsEnabled = false;
+            BtnSet3DMode.IsEnabled = false;
+            TxtModeDescription.Text = "Applicazione configurazione Pen Plotter e riavvio Klipper in corso... attendere circa 15 secondi...";
+
+            var (ok, msg) = await _client.SetPlotterModeAsync(_settings.PrinterIp, _settings.PrinterPort);
+            if (ok)
+            {
+                MessageBox.Show(msg, "Modalità Plotter Attiva", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show(msg, "Errore Configurazione", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+            await CheckConnectionAsync();
+        }
+        finally
+        {
+            Mouse.OverrideCursor = null;
+            BtnSetPlotterMode.IsEnabled = true;
+            BtnSet3DMode.IsEnabled = true;
+        }
+    }
+
+    private async void BtnSet3DMode_Click(object sender, RoutedEventArgs e)
+    {
+        ReadSettingsFromUi();
+        var confirm = MessageBox.Show(
+            "Vuoi ripristinare la stampante in MODALITÀ STAMPA 3D (FABBRICA)?\n\n" +
+            "Modifiche applicate:\n" +
+            "• Routine Home Z originale di fabbrica riattivata (PRES_CHECK + _HOME_Z con tastatore piezoelettrico sul piatto).\n" +
+            "• Sensore di fine filamento riattivato al 100% per rilevare il filamento PLA/PETG.\n" +
+            "• Riavvio sicuro del firmware Klipper (~10-15s).\n\n" +
+            "IMPORTANTE: assicurati che il PENNARELLO sia stato rimosso prima di eseguire qualsiasi Home Z sul piatto!\n\n" +
+            "Procedere con il ripristino di fabbrica per la stampa 3D?",
+            "Ripristina Stampa 3D", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            BtnSetPlotterMode.IsEnabled = false;
+            BtnSet3DMode.IsEnabled = false;
+            TxtModeDescription.Text = "Ripristino configurazione di fabbrica e riavvio Klipper in corso... attendere circa 15 secondi...";
+
+            var (ok, msg) = await _client.Set3DPrintingModeAsync(_settings.PrinterIp, _settings.PrinterPort);
+            if (ok)
+            {
+                MessageBox.Show(msg, "Modalità Stampa 3D Ripristinata", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show(msg, "Errore Ripristino", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+            await CheckConnectionAsync();
+        }
+        finally
+        {
+            Mouse.OverrideCursor = null;
+            BtnSetPlotterMode.IsEnabled = true;
+            BtnSet3DMode.IsEnabled = true;
+        }
     }
 
     private async void BtnPark_Click(object sender, RoutedEventArgs e)

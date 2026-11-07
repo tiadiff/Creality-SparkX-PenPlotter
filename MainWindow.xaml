@@ -123,6 +123,46 @@
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Background="#182234" Padding="18">
                 <StackPanel>
 
+                    <!-- Step 0: Hardware Mode Selector -->
+                    <Border Background="#1e293b" CornerRadius="8" Padding="14" Margin="0,0,0,16" BorderBrush="#334155" BorderThickness="1">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="0. MODALITÀ HARDWARE" FontWeight="Bold" Foreground="#38bdf8"/>
+                                <Border x:Name="BadgeMode" Grid.Column="1" Background="#334155" CornerRadius="4" Padding="8,3">
+                                    <TextBlock x:Name="TxtModeBadge" Text="Rilevamento..." FontSize="11" FontWeight="Bold" Foreground="#cbd5e1"/>
+                                </Border>
+                            </Grid>
+
+                            <TextBlock x:Name="TxtModeDescription" 
+                                       Text="Verifica se la stampante è configurata per il pen plotter o per la normale stampa 3D." 
+                                       Foreground="#94a3b8" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <Button x:Name="BtnSetPlotterMode" Grid.Column="0" Click="BtnSetPlotterMode_Click" Padding="6,8" Background="#4f46e5" ToolTip="Prepara la stampante per il pennarello: disattiva il tastatore Home Z per non piegare la punta e disattiva il sensore filamento">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="✒️ Prepara Plotter" FontSize="11" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button x:Name="BtnSet3DMode" Grid.Column="2" Click="BtnSet3DMode_Click" Padding="6,8" Background="#059669" ToolTip="Ripristina le impostazioni di fabbrica per la stampa 3D: Home Z con tastatore su piatto e sensore filamento attivi">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="🖨️ Ripristina 3D" FontSize="11" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Step 1: File Loading -->
                     <Border Background="#1e293b" CornerRadius="8" Padding="14" Margin="0,0,0,16">
                         <StackPanel>

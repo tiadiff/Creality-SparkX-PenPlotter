@@ -61,6 +61,13 @@ public class PlotterSettings
     public int PrinterPort { get; set; } = 7125;
 }
 
+public enum PrinterHardwareMode
+{
+    Unknown,
+    ThreeDPrinting,
+    PenPlotter
+}
+
 public class PrinterStateInfo
 {
     public bool IsConnected { get; set; }
@@ -71,5 +78,6 @@ public class PrinterStateInfo
     public double Progress { get; set; }
     public string Filename { get; set; } = "";
     public bool FilamentDetected { get; set; }
+    public PrinterHardwareMode HardwareMode { get; set; } = PrinterHardwareMode.Unknown;
 }
 

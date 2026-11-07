@@ -11,6 +11,10 @@
   - **Felt-tip Marker mode**: Merges dense lines, suppresses micro-dots, and prevents ink soaking and bleeding into the paper.
   - **Fine Pen / Ballpoint mode**: Fine resolution for technical diagrams and handwriting.
   - **Artistic / Detailed mode**: High contour density for sketching.
+- **1-Click Hardware Mode Switcher (Plotter vs. 3D Printing)**:
+  - **Prepare Plotter Mode**: Safely overrides `sensorless.cfg` Z-homing to prevent the pen from slamming against the bed during Home Z, suppresses the Creality nozzle strain gauge check (`PRES_CHECK`), and bypasses filament runout pauses.
+  - **Restore 3D Printing Mode**: Reinstates factory-stock configurations with piezoelectric nozzle probing (`PRES_CHECK` + `_HOME_Z`), bed mesh loading, and filament runout sensor for regular PLA/PETG/ABS 3D printing.
+  - Automatic detection and live status badge (`✒️ Plotter (Protetto)` vs. `🖨️ Stampa 3D (Fabbrica)`).
 - **Safety First & Hardware Protection**:
   - Enforces safety margins ($\ge 10\text{ mm}$) from paper edges on the print bed.
   - Heaters and part cooling fans are kept completely disabled (`M104 S0`, `M140 S0`, `M106 S0`).
