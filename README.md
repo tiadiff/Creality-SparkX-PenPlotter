@@ -5,7 +5,7 @@
 <table>
   <tr>
     <td width="340" valign="top">
-      <img src="https://raw.githubusercontent.com/tiadiff/SparkXPenPlotter/master/docs/architecture.png" alt="SparkX Pen Plotter Studio Architecture" width="100%" onerror="this.style.display='none'"/>
+      <img src="docs/architecture.png" alt="SparkX Pen Plotter Studio Architecture" width="100%"/>
       <div style="background:#1e293b; padding:12px; border-radius:8px; border:1px solid #334155; margin-top:8px;">
         <p style="margin:0; font-size:12px; color:#94a3b8;"><b>Target Machine:</b> Creality SparkX i7 (CoreXY)</p>
         <p style="margin:4px 0 0 0; font-size:12px; color:#94a3b8;"><b>Kinematics:</b> Differential CoreXY, 500 mm/s, 11,000 mm/s²</p>
