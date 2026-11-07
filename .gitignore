@@ -11,3 +11,15 @@ project.lock.json
 *.nuget.props
 *.nuget.targets
 
+## Generated test artifacts
+cli/*.gcode
+cli/edges_*.png
+cli/marker_*.png
+cli/clahe_edges.png
+cli/pencil_test.png
+cli/airplane_clean.png
+cli/3130.jpg
+cli/3130_*
+cli/sample_calibration_*
+
+
