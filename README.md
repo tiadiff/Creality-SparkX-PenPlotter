@@ -520,6 +520,18 @@ SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=1 ; Re-enable sensor for 3D pr
 
 ---
 
+## Standalone Python CLI & Batch Conversion Suite
+
+In addition to the WPF GUI, the repository includes a complete Python CLI pipeline under `cli/` for headless conversion, automated batch plotting, and Moonraker configuration management:
+
+- **`cli/pen_plotter.py`**: Standalone vector/raster to G-code converter with TSP path optimization, RDP simplification, and interactive HTML preview generation.
+- **`cli/process_image_to_gcode.py`**: Automated OpenCV raster edge detection and stroke generator.
+- **`cli/manage_printer_config.py`**: CLI Klipper configuration manager to switch between Plotter Mode and Factory 3D mode with backup preservation.
+- **`cli/send_to_printer.py`**: Uploads generated G-code directly to Moonraker and initiates dry-run or real drawing jobs.
+- **`cli/converti_in_gcode.bat`**: 1-click batch conversion script for rapid processing of images and vector files.
+
+---
+
 ## Building from Source
 
 ### Prerequisites:
